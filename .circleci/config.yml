@@ -49,10 +49,13 @@ jobs:
     steps:
       - checkout
       - run:
-          name: lint
+          name: download lint
           command: |
             ./scripts/lint-download.sh
-            make lint-check-diff
+      - run:
+          name: lint
+          command: |
+            lint-check-diff
     environment:
       GO111MODULE: "on"
 
