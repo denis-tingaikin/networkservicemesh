@@ -17,12 +17,13 @@ package common
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"os"
 	"strconv"
 	"time"
 
+	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
+	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
@@ -138,7 +139,12 @@ func createDataplaneConfig(dataplaneProbes *DataplaneProbes) *DataplaneConfig {
 	}
 	logrus.Infof("RegistrarSocketType: %s", cfg.RegistrarSocketType)
 
-	cfg.GRPCserver = tools.NewServer()
+	tracer := opentracing.GlobalTracer()
+	cfg.GRPCserver = grpc.NewServer(
+		grpc.UnaryInterceptor(
+			otgrpc.OpenTracingServerInterceptor(tracer, otgrpc.LogPayloads())),
+		grpc.StreamInterceptor(
+			otgrpc.OpenTracingStreamServerInterceptor(tracer)))
 
 	cfg.Monitor = monitor_crossconnect.NewMonitorServer()
 	crossconnect.RegisterMonitorCrossConnectServer(cfg.GRPCserver, cfg.Monitor)
@@ -237,30 +243,4 @@ func sanityCheckConfig(dataplaneConfig *DataplaneConfig) bool {
 		len(dataplaneConfig.RegistrarSocketType) > 0 &&
 		len(dataplaneConfig.DataplaneSocket) > 0 &&
 		len(dataplaneConfig.DataplaneSocketType) > 0
-}
-
-// SanityCheckConnectionType checks whether the forwarding plane supports the connection type in the request
-func SanityCheckConnectionType(mechanisms *Mechanisms, crossConnect *crossconnect.CrossConnect) error {
-	localFound, remoteFound := false, false
-	/* Verify local mechanisms */
-	for _, mech := range mechanisms.LocalMechanisms {
-		if crossConnect.GetLocalSource().GetMechanism().GetType() == mech.GetType() || crossConnect.GetLocalDestination().GetMechanism().GetType() == mech.GetType() {
-			localFound = true
-			break
-		}
-	}
-	if !localFound {
-		return fmt.Errorf("connection type not supported by the forwarding plane - local")
-	}
-	/* Verify remote mechanisms */
-	for _, mech := range mechanisms.RemoteMechanisms {
-		if crossConnect.GetRemoteSource().GetMechanism().GetType() == mech.GetType() || crossConnect.GetRemoteDestination().GetMechanism().GetType() == mech.GetType() {
-			remoteFound = true
-			break
-		}
-	}
-	if !remoteFound {
-		return fmt.Errorf("connection type not supported by the forwarding plane - remote")
-	}
-	return nil
 }

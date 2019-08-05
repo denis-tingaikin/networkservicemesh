@@ -23,7 +23,6 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -216,14 +215,4 @@ func ParseAnnotationValue(value string) ([]*NSUrl, error) {
 		result = append(result, nsurl)
 	}
 	return result, nil
-}
-
-// ReadEnvBool reads environment variable and treat it as bool
-func ReadEnvBool(env string, value bool) (bool, error) {
-	str := os.Getenv(env)
-	if str == "" {
-		return value, nil
-	}
-
-	return strconv.ParseBool(str)
 }

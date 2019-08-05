@@ -22,6 +22,8 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
+	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
@@ -187,7 +189,12 @@ func (dataplaneRegistrarServer *dataplaneRegistrarServer) Stop() {
 // StartDataplaneRegistrarServer registers and starts gRPC server which is listening for
 // Network Service Dataplane Registrar requests.
 func StartDataplaneRegistrarServer(model model.Model) (*dataplaneRegistrarServer, error) {
-	server := tools.NewServer()
+	tracer := opentracing.GlobalTracer()
+	server := grpc.NewServer(
+		grpc.UnaryInterceptor(
+			otgrpc.OpenTracingServerInterceptor(tracer, otgrpc.LogPayloads())),
+		grpc.StreamInterceptor(
+			otgrpc.OpenTracingStreamServerInterceptor(tracer)))
 
 	dataplaneRegistrarServer := &dataplaneRegistrarServer{
 		grpcServer:                   server,

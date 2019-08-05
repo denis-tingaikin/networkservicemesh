@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: nsmdp
-          image: {{ .Values.registry }}/{{ .Values.org }}/nsmdp:{{ .Values.tag }}
+          image: {{ .Values.registry }}/networkservicemesh/nsmdp:{{ .Values.tag }}
           imagePullPolicy: {{ .Values.pullPolicy }}
           volumeMounts:
             - name: kubelet-socket
@@ -22,13 +22,11 @@ spec:
             - name: nsm-socket
               mountPath: /var/lib/networkservicemesh
         - name: nsmd
-          image: {{ .Values.registry }}/{{ .Values.org }}/nsmd:{{ .Values.tag }}
+          image: {{ .Values.registry }}/networkservicemesh/nsmd:{{ .Values.tag }}
           imagePullPolicy: {{ .Values.pullPolicy }}
           volumeMounts:
             - name: nsm-socket
               mountPath: /var/lib/networkservicemesh
-            - name: nsm-plugin-socket
-              mountPath: /var/lib/networkservicemesh/plugins
           livenessProbe:
             httpGet:
               path: /liveness
@@ -44,7 +42,7 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 3
         - name: nsmd-k8s
-          image: {{ .Values.registry }}/{{ .Values.org }}/nsmd-k8s:{{ .Values.tag }}
+          image: {{ .Values.registry }}/networkservicemesh/nsmd-k8s:{{ .Values.tag }}
           imagePullPolicy: {{ .Values.pullPolicy }}
           env:
             - name: NODE_NAME
@@ -60,7 +58,3 @@ spec:
             path: /var/lib/networkservicemesh
             type: DirectoryOrCreate
           name: nsm-socket
-        - hostPath:
-            path: /var/lib/networkservicemesh/plugins
-            type: DirectoryOrCreate
-          name: nsm-plugin-socket

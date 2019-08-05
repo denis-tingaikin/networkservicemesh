@@ -16,13 +16,10 @@ BUILD_CONTAINERS=nsmd nsmdp nsmd-k8s
 BUILD_CONTAINERS+=crossconnect-monitor
 BUILD_CONTAINERS+=nsm-init nsm-monitor
 BUILD_CONTAINERS+=test-common
-BUILD_CONTAINERS+=nsm-coredns
 
 # Set the configured forwarding plane
 ifeq (${FORWARDING_PLANE}, vpp)
   BUILD_CONTAINERS+=vppagent-dataplane vppagent-dataplane-dev vpp-test-common
-else ifeq (${FORWARDING_PLANE}, kernel-forwarder)
-  BUILD_CONTAINERS+=kernel-forwarder
 endif
 
 

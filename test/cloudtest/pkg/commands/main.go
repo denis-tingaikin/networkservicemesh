@@ -338,7 +338,7 @@ func (ctx *executionContext) processTaskUpdate(event operationEvent) {
 	// Make cluster as ready
 	for _, inst := range event.task.clusterInstances {
 		ctx.setClusterState(inst, func(inst *clusterInstance) {
-			if inst.state == clusterBusy {
+			if inst.state != clusterCrashed {
 				inst.state = clusterReady
 			}
 			inst.taskCancel = nil
@@ -376,7 +376,7 @@ func statusName(status model.Status) interface{} {
 	case model.StatusAdded:
 		return "added"
 	case model.StatusFailed:
-		return "failed"
+		return "failsed"
 	case model.StatusSkipped:
 		return "skipped"
 	case model.StatusSuccess:
@@ -574,11 +574,11 @@ func (ctx *executionContext) startTask(task *testTask, instances []*clusterInsta
 		return fmt.Errorf("invalid task runner")
 	}
 
-	ctx.executeTask(task, clusterConfigs, file, ids, runner, timeout, instances, err, fileName)
+	ctx.execiteTask(task, clusterConfigs, file, ids, runner, timeout, instances, err, fileName)
 	return nil
 }
 
-func (ctx *executionContext) executeTask(task *testTask, clusterConfigs []string, file io.Writer, ids string, runner runners.TestRunner, timeout int64, instances []*clusterInstance, err error, fileName string) {
+func (ctx *executionContext) execiteTask(task *testTask, clusterConfigs []string, file io.Writer, ids string, runner runners.TestRunner, timeout int64, instances []*clusterInstance, err error, fileName string) {
 	go func() {
 		st := time.Now()
 		env := []string{}
@@ -639,7 +639,7 @@ func (ctx *executionContext) executeTask(task *testTask, clusterConfigs []string
 				}
 				inst.taskCancel = nil
 			}
-			if clusterNotAvailable {
+			if timeoutCtx.Err() == context.Canceled && clusterNotAvailable {
 				logrus.Errorf("Test is canceled due timeout and cluster error.. Will be re-run")
 				ctx.updateTestExecution(task, fileName, model.StatusTimeout)
 			} else {
@@ -681,12 +681,11 @@ func (ctx *executionContext) startCluster(ci *clusterInstance) {
 	defer ci.lock.Unlock()
 
 	if ci.state != clusterAdded && ci.state != clusterCrashed {
-		// no need to start
+		// Cluster is already starting.
 		return
 	}
 
 	if ci.startCount > ci.group.config.RetryCount {
-		logrus.Infof("Marking cluster %v as not available attempts reached: %v", ci.id, ci.group.config.RetryCount)
 		ci.state = clusterNotAvailable
 		return
 	}
@@ -706,6 +705,9 @@ func (ctx *executionContext) startCluster(ci *clusterInstance) {
 			execution.errMsg = err
 			execution.status = clusterCrashed
 			ctx.destroyCluster(ci, true, false)
+			ctx.setClusterState(ci, func(ci *clusterInstance) {
+				ci.state = clusterCrashed
+			})
 		} else {
 			execution.status = clusterReady
 		}

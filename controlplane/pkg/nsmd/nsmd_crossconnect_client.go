@@ -17,7 +17,6 @@ package nsmd
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -55,9 +54,9 @@ type NsmMonitorCrossConnectClient struct {
 
 	monitorManager MonitorManager
 	xconManager    *services.ClientConnectionManager
-	endpoints      sync.Map
-	dataplanes     sync.Map
+	endpoints      map[string]context.CancelFunc
 	remotePeers    map[string]*remotePeerDescriptor
+	dataplanes     map[string]context.CancelFunc
 
 	endpointManager EndpointManager
 }
@@ -86,9 +85,9 @@ func NewMonitorCrossConnectClient(monitorManager MonitorManager, xconManager *se
 		monitorManager:  monitorManager,
 		xconManager:     xconManager,
 		endpointManager: endpointManager,
-		endpoints:       sync.Map{},
-		dataplanes:      sync.Map{},
+		endpoints:       map[string]context.CancelFunc{},
 		remotePeers:     map[string]*remotePeerDescriptor{},
+		dataplanes:      map[string]context.CancelFunc{},
 	}
 	return rv
 }
@@ -96,22 +95,22 @@ func NewMonitorCrossConnectClient(monitorManager MonitorManager, xconManager *se
 // EndpointAdded implements method from Listener
 func (client *NsmMonitorCrossConnectClient) EndpointAdded(endpoint *model.Endpoint) {
 	ctx, cancel := context.WithCancel(context.Background())
-	client.endpoints.Store(endpoint.EndpointName(), cancel)
+	client.endpoints[endpoint.EndpointName()] = cancel
 	go client.endpointConnectionMonitor(ctx, endpoint)
 }
 
 // EndpointDeleted implements method from Listener
 func (client *NsmMonitorCrossConnectClient) EndpointDeleted(endpoint *model.Endpoint) {
-	if cancel, ok := client.endpoints.Load(endpoint.EndpointName()); ok {
-		cancel.(context.CancelFunc)()
-		client.endpoints.Delete(endpoint.EndpointName())
+	if cancel, ok := client.endpoints[endpoint.EndpointName()]; ok {
+		cancel()
+		delete(client.endpoints, endpoint.EndpointName())
 	}
 }
 
 // DataplaneAdded implements method from Listener
 func (client *NsmMonitorCrossConnectClient) DataplaneAdded(dp *model.Dataplane) {
 	ctx, cancel := context.WithCancel(context.Background())
-	client.dataplanes.Store(dp.RegisteredName, cancel)
+	client.dataplanes[dp.RegisteredName] = cancel
 	logrus.Infof("Starting Dataplane crossconnect monitoring client...")
 	go client.dataplaneCrossConnectMonitor(ctx, dp)
 }
@@ -119,10 +118,8 @@ func (client *NsmMonitorCrossConnectClient) DataplaneAdded(dp *model.Dataplane) 
 // DataplaneDeleted implements method from Listener
 func (client *NsmMonitorCrossConnectClient) DataplaneDeleted(dp *model.Dataplane) {
 	client.xconManager.DataplaneDown(dp)
-	if cancel, ok := client.dataplanes.Load(dp.RegisteredName); ok {
-		cancel.(context.CancelFunc)()
-		client.dataplanes.Delete(dp.RegisteredName)
-	}
+	client.dataplanes[dp.RegisteredName]()
+	delete(client.dataplanes, dp.RegisteredName)
 }
 
 func (client *NsmMonitorCrossConnectClient) ClientConnectionAdded(clientConnection *model.ClientConnection) {

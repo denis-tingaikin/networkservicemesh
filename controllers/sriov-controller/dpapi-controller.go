@@ -177,7 +177,7 @@ func (s *serviceInstanceController) startServer() error {
 		return err
 	}
 
-	s.server = tools.NewServer()
+	s.server = grpc.NewServer([]grpc.ServerOption{}...)
 	pluginapi.RegisterDevicePluginServer(s.server, s)
 
 	go s.server.Serve(sock)

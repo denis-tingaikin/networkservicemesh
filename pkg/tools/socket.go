@@ -3,7 +3,8 @@ package tools
 import (
 	"context"
 	"net"
-	"sync"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
@@ -20,142 +21,116 @@ const (
 	dialTimeoutDefault = 5 * time.Second
 )
 
-// DialConfig represents configuration of grpc connection, one per instance
-type DialConfig struct {
-	OpenTracing bool
-	Insecure    bool
+type dialConfig struct {
+	opentracing bool
+	insecure    bool
 }
 
-var cfg DialConfig
-var once sync.Once
+var cfg dialConfig
 
-// GetConfig returns instance of DialConfig
-func GetConfig() DialConfig {
-	once.Do(func() {
-		var err error
-		cfg, err = readDialConfig()
-		if err != nil {
-			logrus.Fatal(err)
-		}
-	})
-	return cfg
+func init() {
+	var err error
+	cfg, err = readConfiguration()
+	if err != nil {
+		logrus.Fatal(err)
+	}
 }
 
-// NewServer checks DialConfig and calls grpc.NewServer with certain grpc.ServerOption
-func NewServer(opts ...grpc.ServerOption) *grpc.Server {
-	if GetConfig().OpenTracing {
-		opts = append(opts,
-			grpc.UnaryInterceptor(
-				otgrpc.OpenTracingServerInterceptor(opentracing.GlobalTracer(), otgrpc.LogPayloads())),
-			grpc.StreamInterceptor(
-				otgrpc.OpenTracingStreamServerInterceptor(opentracing.GlobalTracer())))
+func readConfiguration() (dialConfig, error) {
+	rv := dialConfig{}
+
+	if ot, err := readEnvBool(opentracingEnv, opentracingDefault); err == nil {
+		rv.opentracing = ot
+	} else {
+		return dialConfig{}, err
 	}
 
-	return grpc.NewServer(opts...)
+	if insecure, err := readEnvBool(insecureEnv, insecureDefault); err == nil {
+		rv.insecure = insecure
+	} else {
+		return dialConfig{}, err
+	}
+
+	return rv, nil
 }
 
-// DialContext allows to call DialContext using net.Addr
+func readEnvBool(env string, value bool) (bool, error) {
+	str := os.Getenv(env)
+	if str == "" {
+		return value, nil
+	}
+
+	return strconv.ParseBool(str)
+}
+
+// DialContext checks dialConfig and calls grpc.DialContext with certain grpc.DialOption
 func DialContext(ctx context.Context, addr net.Addr, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
-	dialCtx := new(dialBuilder).Network(addr.Network()).DialContextFunc()
-	return dialCtx(ctx, addr.String(), opts...)
+	if cfg.insecure {
+		opts = append(opts, grpc.WithInsecure())
+	}
+
+	if cfg.opentracing {
+		opts = append(opts,
+			grpc.WithUnaryInterceptor(
+				otgrpc.OpenTracingClientInterceptor(opentracing.GlobalTracer(), otgrpc.LogPayloads())),
+			grpc.WithStreamInterceptor(
+				otgrpc.OpenTracingStreamClientInterceptor(opentracing.GlobalTracer())))
+	}
+
+	opts = append(opts,
+		grpc.WithBlock(),
+		grpc.WithContextDialer(func(ctx context.Context, target string) (net.Conn, error) {
+			return net.Dial(addr.Network(), target)
+		}))
+
+	return grpc.DialContext(ctx, addr.String(), opts...)
+}
+
+// DialTimeout tries to establish connection with addr during timeout
+func DialTimeout(addr net.Addr, timeout time.Duration, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return DialContext(ctx, addr, opts...)
 }
 
 // DialContextUnix establish connection with passed unix socket
 func DialContextUnix(ctx context.Context, path string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
-	dialCtx := new(dialBuilder).Unix().DialContextFunc()
-	return dialCtx(ctx, path, opts...)
+	addr, err := net.ResolveUnixAddr("unix", path)
+	if err != nil {
+		return nil, err
+	}
+	return DialContext(ctx, addr, opts...)
 }
 
-// DialUnix establish connection with passed unix socket and set default timeout
+// DialTimeoutUnix tries to establish connection with passed unix socket during timeout
+func DialTimeoutUnix(path string, timeout time.Duration, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return DialContextUnix(ctx, path, opts...)
+}
+
+// DialUnix simply calls DialTimeoutUnix with default timeout
 func DialUnix(path string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
-	dialCtx := new(dialBuilder).Unix().Timeout(dialTimeoutDefault).DialContextFunc()
-	return dialCtx(context.Background(), path, opts...)
+	return DialTimeoutUnix(path, dialTimeoutDefault, opts...)
 }
 
 // DialContextTCP establish TCP connection with address
 func DialContextTCP(ctx context.Context, address string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
-	dialCtx := new(dialBuilder).TCP().DialContextFunc()
-	return dialCtx(ctx, address, opts...)
+	addr, err := net.ResolveTCPAddr("tcp", address)
+	if err != nil {
+		return nil, err
+	}
+	return DialContext(ctx, addr, opts...)
 }
 
-// DialTCP establish TCP connection with address and set default timeout
+// DialTimeoutTCP tries to establish connection with passed address during timeout
+func DialTimeoutTCP(address string, timeout time.Duration, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return DialContextTCP(ctx, address, opts...)
+}
+
+// DialTCP simply calls DialTimeoutTCP with default timeout
 func DialTCP(address string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
-	dialCtx := new(dialBuilder).TCP().Timeout(dialTimeoutDefault).DialContextFunc()
-	return dialCtx(context.Background(), address, opts...)
-}
-
-type dialContextFunc func(ctx context.Context, target string, opts ...grpc.DialOption) (conn *grpc.ClientConn, err error)
-
-type dialBuilder struct {
-	opts []grpc.DialOption
-	t    time.Duration
-}
-
-func (b *dialBuilder) TCP() *dialBuilder {
-	return b.Network("tcp")
-}
-
-func (b *dialBuilder) Unix() *dialBuilder {
-	return b.Network("unix")
-}
-
-func (b *dialBuilder) Network(network string) *dialBuilder {
-	b.opts = append(b.opts, grpc.WithContextDialer(func(ctx context.Context, target string) (net.Conn, error) {
-		return (&net.Dialer{}).DialContext(ctx, network, target)
-	}))
-	return b
-}
-
-func (b *dialBuilder) Timeout(t time.Duration) *dialBuilder {
-	b.t = t
-	return b
-}
-
-func (b *dialBuilder) DialContextFunc() dialContextFunc {
-	return func(ctx context.Context, target string, opts ...grpc.DialOption) (conn *grpc.ClientConn, err error) {
-		if b.t != 0 {
-			var cancel context.CancelFunc
-			ctx, cancel = context.WithTimeout(ctx, b.t)
-			defer cancel()
-		}
-
-		if GetConfig().OpenTracing {
-			b.opts = append(b.opts, OpenTracingDialOptions()...)
-		}
-
-		if GetConfig().Insecure {
-			b.opts = append(b.opts, grpc.WithInsecure())
-		}
-
-		b.opts = append(b.opts, grpc.WithBlock())
-
-		return grpc.DialContext(ctx, target, append(opts, b.opts...)...)
-	}
-}
-
-// OpenTracingDialOptions returns array of grpc.DialOption that should be passed to grpc.Dial to enable opentracing
-func OpenTracingDialOptions() []grpc.DialOption {
-	return []grpc.DialOption{
-		grpc.WithUnaryInterceptor(
-			otgrpc.OpenTracingClientInterceptor(opentracing.GlobalTracer(), otgrpc.LogPayloads())),
-		grpc.WithStreamInterceptor(
-			otgrpc.OpenTracingStreamClientInterceptor(opentracing.GlobalTracer())),
-	}
-}
-
-func readDialConfig() (DialConfig, error) {
-	var err error
-	rv := DialConfig{}
-
-	rv.OpenTracing, err = ReadEnvBool(opentracingEnv, opentracingDefault)
-	if err != nil {
-		return DialConfig{}, err
-	}
-
-	rv.Insecure, err = ReadEnvBool(insecureEnv, insecureDefault)
-	if err != nil {
-		return DialConfig{}, err
-	}
-
-	return rv, nil
+	return DialTimeoutTCP(address, dialTimeoutDefault, opts...)
 }

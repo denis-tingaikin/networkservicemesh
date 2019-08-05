@@ -10,9 +10,7 @@ providers:
     env:
       - CLUSTER_RULES_PREFIX=vagrant
       - CONTAINER_BUILD_PREFIX=docker
-    env-check:
-      - CONTAINER_REPO
-      - CONTAINER_TAG
+      - CONTAINER_REPO=networkservicemesh
     scripts:
       start: |
         make vagrant-start

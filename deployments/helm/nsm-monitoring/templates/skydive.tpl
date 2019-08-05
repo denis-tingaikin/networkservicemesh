@@ -4,7 +4,6 @@ metadata:
   name: skydive-analyzer
   labels:
     app: skydive-analyzer
-  namespace: {{ .Release.Namespace }}
 spec:
   type: NodePort
   ports:
@@ -25,7 +24,6 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: skydive-analyzer-config-file
-  namespace: {{ .Release.Namespace }}
 data:
   skydive.yml: |
     storage:
@@ -33,7 +31,7 @@ data:
         driver: memory
 
     logging:
-      level: INFO
+      level: DEBUG
 
     agent:
       topology:
@@ -67,7 +65,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: skydive-analyzer
-  namespace: {{ .Release.Namespace }}
 spec:
   selector:
     matchLabels:
@@ -82,7 +79,7 @@ spec:
     spec:
       containers:
         - name: skydive-analyzer
-          image: skydive/skydive:0.23.0
+          image: matrohon/skydive
           imagePullPolicy: {{ .Values.pullPolicy }}
           args:
             - analyzer
@@ -112,7 +109,6 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: skydive-agent
-  namespace: {{ .Release.Namespace }}
 spec:
   selector:
     matchLabels:
@@ -128,7 +124,7 @@ spec:
       hostPID: true
       containers:
         - name: skydive-agent
-          image: skydive/skydive:0.23.0
+          image: matrohon/skydive
           imagePullPolicy: {{ .Values.pullPolicy }}
           args:
             - agent
