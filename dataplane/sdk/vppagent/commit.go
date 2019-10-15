@@ -8,9 +8,16 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/ligato/vpp-agent/api/configurator"
-
+	vpp_interfaces "github.com/ligato/vpp-agent/api/models/vpp/interfaces"
+	"github.com/networkservicemesh/networkservicemesh/controlplane/api/connectioncontext"
 	"github.com/networkservicemesh/networkservicemesh/controlplane/api/crossconnect"
 	"github.com/networkservicemesh/networkservicemesh/dataplane/api/dataplane"
+	"github.com/sirupsen/logrus"
+)
+
+const (
+	srcPrefix = "SRC-"
+	dstPrefix = "DST-"
 )
 
 type commit struct {
@@ -42,12 +49,63 @@ func (c *commit) Close(ctx context.Context, crossConnect *crossconnect.CrossConn
 	if err != nil {
 		return nil, err
 	}
+	updateEthernetContext(client, crossConnect)
 	printVppAgentConfiguration(ctx, client)
 	next := Next(ctx)
 	if next == nil {
 		return new(empty.Empty), nil
 	}
 	return next.Close(ctx, crossConnect)
+}
+
+func updateEthernetContext(cc configurator.ConfiguratorClient, crossConnect *crossconnect.CrossConnect) {
+	resp, _ := cc.Dump(context.Background(), &configurator.DumpRequest{})
+	if resp.Dump == nil {
+		println("got it")
+		return
+	}
+	conf := resp.Dump
+	if conf.VppConfig != nil {
+		if crossConnect.GetRemoteSource() != nil {
+			iface := findInterface(dstPrefix+crossConnect.GetRemoteSource().GetId(), conf.VppConfig.Interfaces)
+			if iface == nil {
+				return
+			}
+			if crossConnect.GetRemoteSource().GetContext().EthernetContext == nil {
+				crossConnect.GetRemoteSource().GetContext().EthernetContext = new(connectioncontext.EthernetContext)
+			}
+			if crossConnect.GetRemoteSource().GetContext().EthernetContext == nil {
+				crossConnect.GetRemoteSource().GetContext().EthernetContext.DstMac = iface.PhysAddress
+			}
+		}
+		if crossConnect.GetLocalSource() != nil {
+			iface := findInterface(srcPrefix+crossConnect.GetRemoteSource().GetId(), conf.VppConfig.Interfaces)
+			if iface == nil {
+				return
+			}
+			if crossConnect.GetRemoteSource().GetContext().EthernetContext == nil {
+				crossConnect.GetRemoteSource().GetContext().EthernetContext = new(connectioncontext.EthernetContext)
+			}
+			if crossConnect.GetRemoteSource().GetContext().EthernetContext == nil {
+				crossConnect.GetRemoteSource().GetContext().EthernetContext.SrcMac = iface.PhysAddress
+			}
+		}
+
+	}
+	if conf.LinuxConfig != nil {
+
+	}
+}
+
+func findInterface(name string, ifaces []*vpp_interfaces.Interface) *vpp_interfaces.Interface {
+	for _, ife := range ifaces {
+		if ife.Name == name {
+			logrus.Infof("find if:%v", ife.Name)
+			return ife
+		}
+	}
+	logrus.Infof("not found if:%v", name)
+	return nil
 }
 
 func getDataChangeAndClient(ctx context.Context) (*configurator.Config, configurator.ConfiguratorClient, error) {

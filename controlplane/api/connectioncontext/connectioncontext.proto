@@ -70,6 +70,11 @@ message DNSConfig {
     repeated string search_domains = 2;
 }
 
+message EthernetContext {
+    string src_mac = 1;
+    string dst_mac = 2;
+}
+
 message DNSContext {
     repeated DNSConfig configs = 1;
 }
@@ -77,4 +82,5 @@ message DNSContext {
 message ConnectionContext {
     IPContext ip_context = 1; /* IP related context */
     DNSContext dns_context = 2; /* DNS related context */
+    EthernetContext ethernet_context = 3;
 }
