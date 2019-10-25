@@ -53,6 +53,7 @@ func Jaeger() *v1.Pod {
 func newJaegerEnvVar() []v1.EnvVar {
 	jaegerHost := "jaeger.nsm-system"
 	jaegerPort := "6831"
+	jaegerNodePort := "3000"
 
 	if value := os.Getenv("JAEGER_AGENT_HOST"); value != "" {
 		jaegerHost = value
@@ -72,6 +73,18 @@ func newJaegerEnvVar() []v1.EnvVar {
 		{
 			Name:  "TRACER_ENABLED",
 			Value: "true",
+		},
+		{
+			Name:  "JAEGER_NODE_PORT",
+			Value: jaegerNodePort,
+		},
+		{
+			Name: "NODE_IP",
+			ValueFrom: &v1.EnvVarSource{
+				FieldRef: &v1.ObjectFieldSelector{
+					FieldPath: "status.nodeIP",
+				},
+			},
 		},
 	}
 }

@@ -41,6 +41,7 @@ spec:
       port: 16686
       protocol: TCP
     - name: jaeger
+      nodePort: 30000
       port: 6831
       protocol: UDP
   selector:
