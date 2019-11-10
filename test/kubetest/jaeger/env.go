@@ -27,21 +27,13 @@ import (
 
 const (
 	jaegerPrefix = "JAEGER"
-	//StoreJaegerTraces env variable represents boolean, means store jaeger traces as files
-	StoreJaegerTraces utils.EnvVar = "STORE_JAEGER_TRACES"
-	//StoreJaegerTracesInAnyCases env variable represents boolean, means store jaeger traces if test passed
-	StoreJaegerTracesInAnyCases utils.EnvVar = "STORE_JAEGER_TRACES_IN_ANY_CASE"
 	//JaegerRestAPIPort means port of ingester api server
 	JaegerRestAPIPort utils.EnvVar = "JAEGER_REST_API_PORT"
 	//JaegerAgentHost the hostname for communicating with agent via UDP
 	JaegerAgentHost utils.EnvVar = "JAEGER_AGENT_HOST"
+	//ReportJaegerSpans
+	ReportJaegerSpans utils.EnvVar = "REPORT_JAEGER_SPANS"
 )
-
-//ShouldStoreJaegerTraces means store jaeger traces as files
-func ShouldStoreJaegerTraces() bool {
-	return StoreJaegerTraces.GetBooleanOrDefault(false) &&
-		utils.EnvVar("TRACER_ENABLED").GetBooleanOrDefault(true)
-}
 
 //GetJaegerRestAPIPort returns jaeger API port
 func GetJaegerRestAPIPort() int {

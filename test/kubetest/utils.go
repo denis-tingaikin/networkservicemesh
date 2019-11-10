@@ -14,7 +14,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"testing"
 	"time"
 
 	"k8s.io/client-go/util/cert"
@@ -22,10 +21,10 @@ import (
 
 	"github.com/networkservicemesh/networkservicemesh/controlplane/pkg/properties"
 
-	"github.com/pkg/errors"
-
 	"github.com/networkservicemesh/networkservicemesh/pkg/security"
 	"github.com/networkservicemesh/networkservicemesh/pkg/tools"
+	tools_jaeger "github.com/networkservicemesh/networkservicemesh/pkg/tools/jaeger"
+	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/networkservicemesh/test/applications/cmd/icmp-responder-nse/flags"
 
@@ -111,7 +110,7 @@ func SetupNodesConfig(k8s *K8s, nodesCount int, timeout time.Duration, conf []*p
 	var jaegerPod *v1.Pod
 	k8s.g.Expect(len(nodes) >= nodesCount).To(Equal(true),
 		"At least one Kubernetes node is required for this test")
-	if jaeger.ShouldStoreJaegerTraces() {
+	if tools_jaeger.IsOpentracingEnabled() && jaeger.JaegerAgentHost.IsEmpty() {
 		jaegerPod = k8s.CreatePod(pods.Jaeger())
 		k8s.WaitLogsContains(jaegerPod, jaegerPod.Spec.Containers[0].Name, "Starting HTTP server", timeout)
 		jaeger.JaegerAgentHost.Set(jaegerPod.Status.PodIP)
@@ -863,17 +862,6 @@ func IsNsePinged(k8s *K8s, from *v1.Pod) (result bool) {
 	}
 
 	return result
-}
-
-// PrintErrors - Print errors for system NSMgr pods
-func PrintErrors(failures []string, k8s *K8s, nodesSetup []*NodeConf, nscInfo *NSCCheckInfo, t *testing.T) {
-	if len(failures) > 0 {
-		logrus.Errorf("Failures: %v", failures)
-		makeLogsSnapshot(k8s, t)
-		nscInfo.PrintLogs()
-
-		t.Fail()
-	}
 }
 
 //NSLookup invokes nslookup on pod with concrete hostname. Tries several times

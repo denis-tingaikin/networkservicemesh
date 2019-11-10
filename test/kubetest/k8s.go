@@ -15,6 +15,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/networkservicemesh/networkservicemesh/test/kubetest/artifact"
+
 	"github.com/pkg/errors"
 
 	"github.com/networkservicemesh/networkservicemesh/pkg/tools/jaeger"
@@ -311,6 +313,7 @@ func blockUntilPodWorking(client kubernetes.Interface, context context.Context, 
 }
 
 type K8s struct {
+	artifactConf       artifact.Config
 	clientset          kubernetes.Interface
 	versionedClientSet *versioned.Clientset
 	podLock            sync.Mutex
@@ -331,7 +334,7 @@ type spanRecord struct {
 }
 
 func (k8s *K8s) reportSpans() {
-	if !jaeger.IsOpentracingEnabled() || jaeger_env.StoreJaegerTraces.GetBooleanOrDefault(false) {
+	if !jaeger.IsOpentracingEnabled() || jaeger_env.ReportJaegerSpans.GetBooleanOrDefault(false) {
 		return
 	}
 	logrus.Infof("Finding spans")
@@ -350,7 +353,7 @@ func (k8s *K8s) reportSpans() {
 		}
 	}
 	for spanID, span := range spans {
-		keys := []string{}
+		var keys []string
 		for k := range span.spanPod {
 			keys = append(keys, k)
 		}
@@ -473,7 +476,7 @@ func NewK8sWithoutRolesForConfig(g *WithT, prepare bool, kubeconfigPath string) 
 	}
 
 	client.CreateServiceAccounts()
-
+	client.artifactConf = artifact.ConfigFromEnv()
 	return &client, nil
 }
 
