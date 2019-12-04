@@ -8,8 +8,15 @@ for ns in $(kubectl get ns -o custom-columns=NAME:.metadata.name); do
   fi
   echo "Checking ns: ${ns}"
   if [[ ${ns} == *${NSM_NAMESPACE}* ]]; then
-    echo "Deleting ns: ${ns}"
-    kubectl delete ns "${ns}"
+    {
+      echo "Deleting ns: ${ns}"
+      kubectl delete ns "${ns}"
+    } || {
+      echo "Force deleting ns: ${ns}"
+      kubectl delete ns "${ns}"  --force --grace-period=0
+    } || {
+      echo "Can not delete ns: ${ns}"
+    }
     continue
   fi
 done
