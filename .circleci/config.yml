@@ -162,6 +162,11 @@ jobs:
             export STORE_JAEGER_TRACES=true
             pushd test
             go get github.com/networkservicemesh/cloudtest
+            pushd $GOPATH/src/github.com/networkservicemesh/cloudtest
+            git fetch origin pull/3/head:cloud_test_improvments
+            git checkout cloud_test_improvments
+            go install ./...
+            popd
             popd
             cloudtest || ERR=$?
             [ "${CIRCLE_BRANCH}" == "master" ] && [ "$ERR" == "" ] && exit 0
