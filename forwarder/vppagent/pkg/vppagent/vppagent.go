@@ -138,7 +138,7 @@ func (v *VPPAgent) reset() error {
 	if err != nil {
 		logrus.Errorf("failed to reset vppagent: %s", err)
 	}
-	logrus.Infof("Finished resetting vppagent...")
+	logrus.Infof("OnArtifactsSaved resetting vppagent...")
 	return nil
 }
 

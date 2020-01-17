@@ -40,7 +40,7 @@ func testNSMHealRemoteDieNSMD_NSE(t *testing.T, remoteMechanism string) {
 	defer k8s.Cleanup()
 
 	g.Expect(err).To(BeNil())
-	defer kubetest.MakeLogsSnapshot(k8s, t)
+	defer k8s.SaveTestArtifacts(t)
 	// Deploy open tracing to see what happening.
 	config := []*pods.NSMgrPodConfig{
 		{
@@ -83,7 +83,7 @@ func testNSMHealRemoteDieNSMD_NSE(t *testing.T, remoteMechanism string) {
 	nodes_setup[1].Nsmd = k8s.CreatePod(pods.NSMgrPodWithConfig(nsmdName, nodes_setup[1].Node, &pods.NSMgrPodConfig{Namespace: k8s.GetK8sNamespace()})) // Recovery NSEs
 	// Wait for NSMgr to be deployed, to not get admission error
 	kubetest.WaitNSMgrDeployed(k8s, nodes_setup[1].Nsmd, defaultTimeout)
-	logrus.Printf("Started new NSMD: %v on node %s", time.Since(startTime), nodes_setup[1].Node.Name)
+	logrus.Printf("OnArtifactsSave new NSMD: %v on node %s", time.Since(startTime), nodes_setup[1].Node.Name)
 
 	// Restore ICMP responder pod.
 	icmpPod = kubetest.DeployICMP(k8s, nodes_setup[1].Node, "icmp-responder-nse-2", defaultTimeout)
@@ -137,7 +137,7 @@ func testNSMHealRemoteDieNSMD(t *testing.T, remoteMechanism string) {
 	nodes_setup[1].Nsmd = k8s.CreatePod(pods.NSMgrPodWithConfig(nsmdName, nodes_setup[1].Node, &pods.NSMgrPodConfig{Namespace: k8s.GetK8sNamespace()})) // Recovery NSEs
 	// Wait for NSMgr to be deployed, to not get admission error
 	kubetest.WaitNSMgrDeployed(k8s, nodes_setup[1].Nsmd, defaultTimeout)
-	logrus.Printf("Started new NSMD: %v on node %s", time.Since(startTime), nodes_setup[1].Node.Name)
+	logrus.Printf("OnArtifactsSave new NSMD: %v on node %s", time.Since(startTime), nodes_setup[1].Node.Name)
 
 	logrus.Infof("Waiting for connection recovery...")
 	k8s.WaitLogsContains(nodes_setup[0].Nsmd, "nsmd", "Heal: Connection recovered:", defaultTimeout)

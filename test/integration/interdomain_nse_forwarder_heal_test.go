@@ -46,7 +46,7 @@ func testInterdomainForwarderHeal(t *testing.T, clustersCount int, nodesCount in
 		k8s, err := kubetest.NewK8sForConfig(g, true, kubeconfig)
 		g.Expect(err).To(BeNil())
 		defer k8s.Cleanup()
-		defer kubetest.MakeLogsSnapshot(k8s, t)
+		defer k8s.SaveTestArtifacts(t)
 
 		config := []*pods.NSMgrPodConfig{}
 
@@ -107,7 +107,7 @@ func testInterdomainForwarderHeal(t *testing.T, clustersCount int, nodesCount in
 	logrus.Infof("Starting recovered forwarder...")
 	startTime := time.Now()
 	k8ss[killIndex].NodesSetup[0].Forwarder = k8ss[killIndex].K8s.CreatePod(pods.ForwardingPlane(dpName, k8ss[killIndex].NodesSetup[nodeKillIndex].Node, k8ss[killIndex].K8s.GetForwardingPlane()))
-	logrus.Printf("Started new Forwarder: %v on node %s", time.Since(startTime), k8ss[killIndex].NodesSetup[nodeKillIndex].Node.Name)
+	logrus.Printf("OnArtifactsSave new Forwarder: %v on node %s", time.Since(startTime), k8ss[killIndex].NodesSetup[nodeKillIndex].Node.Name)
 
 	// Check NSMd goint into HEAL state.
 

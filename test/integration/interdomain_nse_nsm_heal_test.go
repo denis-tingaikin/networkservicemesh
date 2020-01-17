@@ -57,7 +57,7 @@ func testInterdomainNSMHeal(t *testing.T, clustersCount int, killIndex int, dele
 		k8s, err := kubetest.NewK8sForConfig(g, true, kubeconfig)
 		g.Expect(err).To(BeNil())
 		defer k8s.Cleanup()
-		defer kubetest.MakeLogsSnapshot(k8s, t)
+		defer k8s.SaveTestArtifacts(t)
 
 		config := []*pods.NSMgrPodConfig{}
 
@@ -133,7 +133,7 @@ func testInterdomainHealLocalNSMD(k8ss []*kubetest.ExtK8s, clustersCount int) {
 		)) // Recovery NSEs
 	// Wait for NSMgr to be deployed, to not get admission error
 	kubetest.WaitNSMgrDeployed(k8ss[0].K8s, k8ss[0].NodesSetup[0].Nsmd, defaultTimeout)
-	logrus.Printf("Started new NSMD: %v on node %s", time.Since(startTime), k8ss[0].NodesSetup[0].Node.Name)
+	logrus.Printf("OnArtifactsSave new NSMD: %v on node %s", time.Since(startTime), k8ss[0].NodesSetup[0].Node.Name)
 }
 
 func testInterdomainHealRemoteNSMD(k8ss []*kubetest.ExtK8s, clustersCount int, icmpPod *v1.Pod, deleteNSE bool) {
@@ -162,7 +162,7 @@ func testInterdomainHealRemoteNSMD(k8ss []*kubetest.ExtK8s, clustersCount int, i
 	// Wait for NSMgr to be deployed, to not get admission error
 	kubetest.WaitNSMgrDeployed(k8ss[clustersCount-1].K8s, k8ss[clustersCount-1].NodesSetup[0].Nsmd, defaultTimeout)
 
-	logrus.Printf("Started new NSMD: %v on node %s", time.Since(startTime), k8ss[0].NodesSetup[0].Node.Name)
+	logrus.Printf("OnArtifactsSave new NSMD: %v on node %s", time.Since(startTime), k8ss[0].NodesSetup[0].Node.Name)
 
 	if deleteNSE {
 		// Restore ICMP responder pod.

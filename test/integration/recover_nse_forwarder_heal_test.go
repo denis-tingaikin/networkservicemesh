@@ -72,7 +72,7 @@ func testForwarderHeal(t *testing.T, killForwarderIndex, nodesCount int, fixture
 	// Deploy open tracing to see what happening.
 	nodes_setup, err := kubetest.SetupNodes(k8s, nodesCount, defaultTimeout)
 	g.Expect(err).To(BeNil())
-	defer kubetest.MakeLogsSnapshot(k8s, t)
+	defer k8s.SaveTestArtifacts(t)
 	// Run ICMP on latest node
 	fixture.DeployNse(k8s, nodes_setup[nodesCount-1].Node, "icmp-responder-nse-1", defaultTimeout)
 
@@ -90,7 +90,7 @@ func testForwarderHeal(t *testing.T, killForwarderIndex, nodesCount int, fixture
 	logrus.Infof("Starting recovered forwarder...")
 	startTime := time.Now()
 	nodes_setup[killForwarderIndex].Forwarder = k8s.CreatePod(pods.ForwardingPlane(dpName, nodes_setup[killForwarderIndex].Node, k8s.GetForwardingPlane()))
-	logrus.Printf("Started new Forwarder: %v on node %s", time.Since(startTime), nodes_setup[killForwarderIndex].Node.Name)
+	logrus.Printf("OnArtifactsSave new Forwarder: %v on node %s", time.Since(startTime), nodes_setup[killForwarderIndex].Node.Name)
 
 	// Check NSMd goint into HEAL state.
 

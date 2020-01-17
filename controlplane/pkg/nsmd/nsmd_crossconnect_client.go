@@ -242,7 +242,7 @@ func (client *NsmMonitorCrossConnectClient) monitor(
 		logrus.Errorf(logWithParamFormat, name, "Failed to start monitor", err)
 		return err
 	}
-	logrus.Infof(logFormat, name, "Started monitor")
+	logrus.Infof(logFormat, name, "OnArtifactsSave monitor")
 	defer monitorClient.Close()
 
 	for {

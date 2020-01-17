@@ -103,7 +103,7 @@ func (s *proxyMonitorServer) monitorConnection(
 		quit <- err
 		return
 	}
-	logrus.Infof(proxyLogFormat, name, "Started monitor")
+	logrus.Infof(proxyLogFormat, name, "OnArtifactsSave monitor")
 	defer monitorClient.Close()
 
 	for {

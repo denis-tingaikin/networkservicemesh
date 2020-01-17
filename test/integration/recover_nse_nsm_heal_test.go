@@ -29,7 +29,7 @@ func TestNSMHealLocalDieNSMD(t *testing.T) {
 	defer k8s.Cleanup()
 
 	g.Expect(err).To(BeNil())
-	defer kubetest.MakeLogsSnapshot(k8s, t)
+	defer k8s.SaveTestArtifacts(t)
 
 	// Deploy open tracing to see what happening.
 	nodes_setup, err := kubetest.SetupNodes(k8s, 2, defaultTimeout)
@@ -54,7 +54,7 @@ func TestNSMHealLocalDieNSMD(t *testing.T) {
 	logrus.Infof("Starting recovered NSMD...")
 	startTime := time.Now()
 	nodes_setup[0].Nsmd = k8s.CreatePod(pods.NSMgrPodWithConfig(nsmdName, nodes_setup[0].Node, &pods.NSMgrPodConfig{Namespace: k8s.GetK8sNamespace()})) // Recovery NSEs
-	logrus.Printf("Started new NSMD: %v on node %s", time.Since(startTime), nodes_setup[0].Node.Name)
+	logrus.Printf("OnArtifactsSave new NSMD: %v on node %s", time.Since(startTime), nodes_setup[0].Node.Name)
 
 	logrus.Infof("Waiting for connection recovery...")
 	k8s.WaitLogsContains(nodes_setup[0].Nsmd, "nsmd", "Heal: Connection recovered:", defaultTimeout)
@@ -94,7 +94,7 @@ func testNSMHealLocalDieNSMDOneNode(t *testing.T, deployNsc, deployNse kubetest.
 	defer k8s.Cleanup()
 
 	g.Expect(err).To(BeNil())
-	kubetest.MakeLogsSnapshot(k8s, t)
+	defer k8s.SaveTestArtifacts(t)
 	// Deploy open tracing to see what happening.
 	nodes_setup, err := kubetest.SetupNodes(k8s, 1, defaultTimeout)
 	g.Expect(err).To(BeNil())
@@ -119,7 +119,7 @@ func testNSMHealLocalDieNSMDOneNode(t *testing.T, deployNsc, deployNse kubetest.
 	logrus.Infof("Starting recovered NSMD...")
 	startTime := time.Now()
 	nodes_setup[0].Nsmd = k8s.CreatePod(pods.NSMgrPodWithConfig(nsmdName, nodes_setup[0].Node, &pods.NSMgrPodConfig{Namespace: k8s.GetK8sNamespace()})) // Recovery NSEs
-	logrus.Printf("Started new NSMD: %v on node %s", time.Since(startTime), nodes_setup[0].Node.Name)
+	logrus.Printf("OnArtifactsSave new NSMD: %v on node %s", time.Since(startTime), nodes_setup[0].Node.Name)
 
 	logrus.Infof("Waiting for connection recovery...")
 	k8s.WaitLogsContains(nodes_setup[0].Nsmd, "nsmd", "Heal: Connection recovered:", defaultTimeout)
@@ -193,7 +193,7 @@ func testNSMHealLocalDieNSMDTwoNodes(t *testing.T, deployNsc, deployNse kubetest
 	logrus.Infof("Starting recovered NSMD...")
 	startTime := time.Now()
 	nodes_setup[0].Nsmd = k8s.CreatePod(pods.NSMgrPodWithConfig(nsmdName, nodes_setup[0].Node, &pods.NSMgrPodConfig{Namespace: k8s.GetK8sNamespace()})) // Recovery NSEs
-	logrus.Printf("Started new NSMD: %v on node %s", time.Since(startTime), nodes_setup[0].Node.Name)
+	logrus.Printf("OnArtifactsSave new NSMD: %v on node %s", time.Since(startTime), nodes_setup[0].Node.Name)
 
 	logrus.Infof("Waiting for connection recovery...")
 	k8s.WaitLogsContains(nodes_setup[0].Nsmd, "nsmd", "Heal: Connection recovered:", defaultTimeout)

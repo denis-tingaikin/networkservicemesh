@@ -14,8 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package artifact
+package artifacts
 
-type Presenter interface {
-	Present(artifact Artifact)
+//Hook calls when before artifact presents and after
+type Hook interface {
+	OnPresent(Artifact) Artifact
+	OnPresented(Artifact)
+	OnArtifactsSave()
+	OnArtifactsSaved()
 }
