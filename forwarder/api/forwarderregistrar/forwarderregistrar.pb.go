@@ -228,11 +228,11 @@ var fileDescriptor_bf2c0f4975ef21fe = []byte{
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ context.Context
-var _ grpc.ClientConnInterface
+var _ grpc.ClientConn
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion6
+const _ = grpc.SupportPackageIsVersion4
 
 // ForwarderRegistrationClient is the client API for ForwarderRegistration service.
 //
@@ -246,10 +246,10 @@ type ForwarderRegistrationClient interface {
 }
 
 type forwarderRegistrationClient struct {
-	cc grpc.ClientConnInterface
+	cc *grpc.ClientConn
 }
 
-func NewForwarderRegistrationClient(cc grpc.ClientConnInterface) ForwarderRegistrationClient {
+func NewForwarderRegistrationClient(cc *grpc.ClientConn) ForwarderRegistrationClient {
 	return &forwarderRegistrationClient{cc}
 }
 
@@ -389,10 +389,10 @@ type ForwarderUnRegistrationClient interface {
 }
 
 type forwarderUnRegistrationClient struct {
-	cc grpc.ClientConnInterface
+	cc *grpc.ClientConn
 }
 
-func NewForwarderUnRegistrationClient(cc grpc.ClientConnInterface) ForwarderUnRegistrationClient {
+func NewForwarderUnRegistrationClient(cc *grpc.ClientConn) ForwarderUnRegistrationClient {
 	return &forwarderUnRegistrationClient{cc}
 }
 
